@@ -39,6 +39,7 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
+const themeToggle = document.getElementById('theme-toggle');
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 
@@ -156,6 +157,10 @@ function updateHUD() {
   levelEl.textContent = level;
 }
 
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
   const color = COLORS[colorIndex];
@@ -163,13 +168,13 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
   context.fillStyle = color;
   context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
   // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
+  context.fillStyle = cssVar('--block-highlight');
   context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
   context.globalAlpha = 1;
 }
 
 function drawGrid() {
-  ctx.strokeStyle = '#22222e';
+  ctx.strokeStyle = cssVar('--grid-line');
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -199,7 +204,7 @@ function draw() {
   for (let r = 0; r < current.shape.length; r++)
     for (let c = 0; c < current.shape[r].length; c++)
       if (current.shape[r][c])
-        drawBlock(ctx, current.x + c, gy + r, current.shape[r][c], BLOCK, 0.2);
+        drawBlock(ctx, current.x + c, gy + r, current.shape[r][c], BLOCK, parseFloat(cssVar('--ghost-alpha')));
 
   // current piece
   for (let r = 0; r < current.shape.length; r++)
@@ -300,5 +305,26 @@ document.addEventListener('keydown', e => {
 });
 
 restartBtn.addEventListener('click', init);
+
+function applyTheme(theme) {
+  const light = theme === 'light';
+  if (light) document.documentElement.dataset.theme = 'light';
+  else delete document.documentElement.dataset.theme;
+  themeToggle.textContent = light ? '☾ Modo oscuro' : '☀ Modo claro';
+  themeToggle.setAttribute('aria-pressed', String(light));
+  // repintar también en pausa o game over
+  if (current) draw();
+  if (next) drawNext();
+}
+
+themeToggle.addEventListener('click', () => {
+  const light = document.documentElement.dataset.theme !== 'light';
+  applyTheme(light ? 'light' : 'dark');
+  try { localStorage.setItem('tetris-theme', light ? 'light' : 'dark'); } catch (e) {}
+  themeToggle.blur(); // evita que Space active el botón durante el juego
+});
+
+try { applyTheme(localStorage.getItem('tetris-theme') === 'light' ? 'light' : 'dark'); }
+catch (e) { applyTheme('dark'); }
 
 init();
